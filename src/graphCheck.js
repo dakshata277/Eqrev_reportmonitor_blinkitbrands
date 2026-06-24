@@ -41,15 +41,29 @@ async function resolveToken(client) {
  * Throws on token / HTTP errors so the caller can log + isolate per client.
  */
 async function checkClientGraph(client, { fromDate, toDate, yesterdayISO, campaignTypes }) {
-  const token = await resolveToken(client);
+  let token = await resolveToken(client);
 
   // Self-heals the per-advertiser "type not enabled" 400 and reports back the
   // type-set that worked, so the download trigger can reuse it.
-  const { res, types } = await requestWithEnabledTypes(
+  let { res, types } = await requestWithEnabledTypes(
     (t) => fetchMetricsTrends(token, fromDate, toDate, t),
     campaignTypes,
     `metrics ${client.name}`
   );
+
+  // 401 = Blinkit server-side token expiry (shorter than Firebase TTL).
+  // Force-refresh and retry once before giving up.
+  if (res.status === 401) {
+    const { getToken: _getToken } = require("./blinkit/getToken");
+    const freshResp = await _getToken(client.email, true);
+    token = extractToken(freshResp);
+    if (!token) throw new Error(`metrics-trends HTTP 401: token re-fetch failed for ${client.email}`);
+    ({ res, types } = await requestWithEnabledTypes(
+      (t) => fetchMetricsTrends(token, fromDate, toDate, t),
+      campaignTypes,
+      `metrics ${client.name}`
+    ));
+  }
 
   // 204 = brand has no spend for this period (not an error)
   if (res.status === 204) {
