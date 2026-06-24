@@ -2,18 +2,6 @@
 // (Task Scheduler can run `node <abs>/server.js` from anywhere).
 require("dotenv").config({ path: require("path").resolve(__dirname, "..", ".env") });
 
-// Defaults so the .env only needs GOOGLE_CLOUD_CREDENTIALS, GMAIL_IMPERSONATE,
-// GCHAT_WEBHOOK_URL. wsProxyClient/getToken read these off process.env.
-if (!process.env.PROXIES_API_KEY) {
-  process.env.PROXIES_API_KEY = "3294g6f2teao7qno9jb6ln8ng95gcdmlpdukassy";
-}
-if (!process.env.FAST_TOKEN_BASE_URL) {
-  process.env.FAST_TOKEN_BASE_URL =
-    "https://eqrev-qcom-session-collector.vercel.app";
-}
-
-const DEFAULT_GCHAT_WEBHOOK =
-  "https://chat.googleapis.com/v1/spaces/AAQAOg8la9k/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=jKT0Horhj7Axhp8t6A1e3-Olaoc3oTQ6T-OzIFskaE0";
 
 module.exports = {
   // ─── Schedule (IST): runs cycles startHHMM..endHHMM, then exits ───────────

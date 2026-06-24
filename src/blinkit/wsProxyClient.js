@@ -83,16 +83,26 @@ function createHttpClientWithProxy() {
         return fetchWithCycleTLS(config);
       }
 
-      // Try up to MAX_WORKER_ATTEMPTS different workers on Cloudflare 403.
+      // Try up to MAX_WORKER_ATTEMPTS different workers on Cloudflare 403 or timeout.
       const MAX_WORKER_ATTEMPTS = 5;
-      let lastResult;
+      let lastError;
 
       for (let attempt = 0; attempt < MAX_WORKER_ATTEMPTS; attempt++) {
         const worker = getWorkerByIndex(workerIndex + attempt);
         if (!worker) break;
 
-        const raw = await worker.request(config);
-        const result = normaliseWorkerResult(raw);
+        let result;
+        try {
+          const raw = await worker.request(config);
+          result = normaliseWorkerResult(raw);
+        } catch (err) {
+          // Worker timed out, process died, or returned bad JSON — try next worker
+          log.warn(
+            `[ProxyClient] Worker#${(workerIndex + attempt) % proxies.length} error (${err.message.slice(0, 80)}) - rotating (attempt ${attempt + 1}/${MAX_WORKER_ATTEMPTS})`
+          );
+          lastError = err;
+          continue;
+        }
 
         const isCloudflareBan =
           result.status === 403 &&
@@ -112,7 +122,7 @@ function createHttpClientWithProxy() {
         log.warn(
           `[ProxyClient] Worker#${(workerIndex + attempt) % proxies.length} Cloudflare-blocked - rotating (attempt ${attempt + 1}/${MAX_WORKER_ATTEMPTS})`
         );
-        lastResult = result;
+        lastError = new Error("Cloudflare blocked");
       }
 
       // All proxy attempts exhausted - fall back to direct serial queue
