@@ -24,6 +24,19 @@ function beforeStartTime(now = new Date()) {
   return istMinutesOfDay(now) < start;
 }
 
+// Returns true when it is safe to stop polling:
+//   1. All non-zero-spend brands have received their report, AND
+//   2. Current IST time is at or past 14:00 (ensures we don't stop early when
+//      only partial data is available, which can happen before ~12:00 AM).
+function allBrandsReceivedAfter2PM(now = new Date()) {
+  if (istMinutesOfDay(now) < 14 * 60) return false; // condition 2
+  const active = clients.filter((c) => !state.perClient[c.key]?.noContent);
+  return (
+    active.length > 0 &&
+    active.every((c) => state.perClient[c.key]?.reportReceived)
+  ); // condition 1
+}
+
 function stop(reason) {
   log.info(`[loop] ${reason} - stopping monitor`);
   process.exit(0);
@@ -62,6 +75,10 @@ async function tick() {
     log.info("[loop] cycle start");
     await runCycle(state, clients);
     log.info("[loop] cycle end");
+    if (allBrandsReceivedAfter2PM()) {
+      stop("all non-zero-spend brands received reports and time is past 14:00 IST");
+      return;
+    }
   } catch (err) {
     log.error(`[loop] unhandled cycle error: ${err.stack || err.message}`);
   }
