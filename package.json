@@ -1,0 +1,21 @@
+{
+  "name": "eqrev_reportmonitor_blinkitbrands",
+  "version": "1.0.0",
+  "description": "Monitors Blinkit Brands graph data (current_date-1) for Ace Blend & Pepe, re-triggers the report download until the report email lands in the mailbox, and logs every 10 min to a per-day log file. One combined GChat note on first full success.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "EQRev",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
+    "axios": "^1.10.0",
+    "dotenv": "^16.6.1",
+    "googleapis": "^171.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
