@@ -20,6 +20,11 @@ function perClientNoData(name, yesterdayISO) {
   return `data not updated | ${name} | for ${yesterdayISO}`;
 }
 
+/** Per-client line when metrics-trends returned 204 (zero spend, excluded from GChat). */
+function perClientNoContent(name) {
+  return `no content (zero spend) | ${name} | excluded from report wait`;
+}
+
 /** Per-client status line when the client HAS yesterday-data. */
 function perClientStatus(name, budget, received) {
   const tail = received ? "report received" : "report NOT received";
@@ -41,6 +46,7 @@ module.exports = {
   formatBudget,
   combinedNoData,
   perClientNoData,
+  perClientNoContent,
   perClientStatus,
   gchatCombined,
 };

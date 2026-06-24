@@ -19,6 +19,7 @@ const { sendCombinedSuccess } = require("./gchat");
 const {
   combinedNoData,
   perClientNoData,
+  perClientNoContent,
   perClientStatus,
 } = require("./messages");
 
@@ -32,9 +33,10 @@ function createState() {
 function blankClientState() {
   return {
     dataFound: false,
+    noContent: false,   // true = 204 from metrics-trends (zero spend, exclude from GChat)
     reportReceived: false,
     budget: null,
-    triggeredTimes: [], // IST "YYYY-MM-DD HH:MM" of every trigger fired today
+    triggeredTimes: [],
   };
 }
 
@@ -130,9 +132,21 @@ async function runCycle(state, clients, deps = {}) {
 
   const dataResults = results.filter((r) => r.hasData);
 
-  // ── Step 2: nobody has data -> one combined line ───────────────────────────
+  // Mark noContent brands in state (204 = zero spend, excluded from GChat wait)
+  for (const r of results) {
+    if (r.noContent) state.perClient[r.client.key].noContent = true;
+  }
+
+  // ── Step 2: nobody has data (ignoring 204 brands) -> one combined line ─────
+  const waitingResults = results.filter((r) => !r.hasData && !r.noContent);
+  if (dataResults.length === 0 && waitingResults.length > 0) {
+    d.logStatus(combinedNoData(waitingResults.map((r) => r.client.name), yesterdayISO));
+  }
   if (dataResults.length === 0) {
-    d.logStatus(combinedNoData(clients.map((c) => c.name), yesterdayISO));
+    // Log noContent brands even when no data brands exist
+    for (const r of results.filter((r) => r.noContent)) {
+      d.logStatus(perClientNoContent(r.client.name));
+    }
     return state;
   }
 
@@ -183,13 +197,20 @@ async function runCycle(state, clients, deps = {}) {
     const st = state.perClient[r.client.key];
     if (r.hasData) {
       d.logStatus(perClientStatus(r.client.name, st.budget, st.reportReceived));
+    } else if (st.noContent) {
+      d.logStatus(perClientNoContent(r.client.name));
     } else {
       d.logStatus(perClientNoData(r.client.name, yesterdayISO));
     }
   }
 
-  // ── Step 4: combined GChat once all brands have received ───────────────────
-  const allReceived = clients.every((c) => state.perClient[c.key]?.reportReceived);
+  // ── Step 4: GChat once all non-204 brands have received ───────────────────
+  // 204 brands (noContent) are permanently excluded. All others must eventually
+  // get data and have their report email arrive before GChat fires.
+  const nonNoContentClients = clients.filter((c) => !state.perClient[c.key]?.noContent);
+  const allReceived =
+    nonNoContentClients.length > 0 &&
+    nonNoContentClients.every((c) => state.perClient[c.key]?.reportReceived);
   if (allReceived && !state.successGchatSent) {
     await sendDailySummary(state, clients, d);
   }

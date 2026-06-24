@@ -51,6 +51,11 @@ async function checkClientGraph(client, { fromDate, toDate, yesterdayISO, campai
     `metrics ${client.name}`
   );
 
+  // 204 = brand has no spend for this period (not an error)
+  if (res.status === 204) {
+    return { hasData: false, noContent: true, budgetConsumed: null, token, campaignTypes: types };
+  }
+
   if (res.status !== 200) {
     const body =
       typeof res.data === "object" ? JSON.stringify(res.data) : String(res.data);
