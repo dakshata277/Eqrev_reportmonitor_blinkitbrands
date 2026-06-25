@@ -1,14 +1,15 @@
 // Single combined GChat note (once per day).
 const log = require("./logger");
 const { gchatCombined } = require("./messages");
+const { istTimestamp } = require("./dateUtils");
 
-async function sendCombinedSuccess(webhookUrl, clientsInfo, yesterdayISO) {
+async function sendCombinedSuccess(webhookUrl, clientsInfo, todayISO) {
   if (!webhookUrl) {
     log.warn("[gchat] GCHAT_WEBHOOK_URL not configured - skipping notification");
     return false;
   }
 
-  const text = gchatCombined(clientsInfo, yesterdayISO);
+  const text = gchatCombined(clientsInfo, todayISO, istTimestamp());
 
   try {
     const response = await fetch(webhookUrl, {

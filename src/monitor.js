@@ -37,6 +37,7 @@ function blankClientState() {
     reportReceived: false,
     budget: null,
     triggeredTimes: [],
+    dataFoundAt: null,  // IST timestamp when data was first detected this day
   };
 }
 
@@ -155,6 +156,7 @@ async function runCycle(state, clients, deps = {}) {
   await Promise.all(
     dataResults.map(async (r) => {
       const st = state.perClient[r.client.key];
+      if (!st.dataFound) st.dataFoundAt = istTimestamp(d.now());
       st.dataFound = true;
       st.budget = r.budgetConsumed;
 
@@ -229,11 +231,13 @@ async function sendDailySummary(state, clients, deps = {}) {
       id: c.id,
       name: c.name,
       budget: state.perClient[c.key].budget,
+      dataFoundAt: state.perClient[c.key].dataFoundAt,
     }));
 
   if (info.length === 0) return false;
 
-  const sent = await send(config.gchatWebhookUrl, info, state.dayKey);
+  const todayISO = deps.todayISO || new Date().toISOString().slice(0, 10);
+  const sent = await send(config.gchatWebhookUrl, info, todayISO);
   if (sent) state.successGchatSent = true;
   return sent;
 }

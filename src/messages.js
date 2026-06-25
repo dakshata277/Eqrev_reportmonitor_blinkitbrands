@@ -34,12 +34,13 @@ function perClientStatus(name, budget, received) {
 }
 
 /**
- * Single combined GChat note — one message for ALL brands, each line is just
- * "client id : budget consumed".
+ * Single combined GChat note — one message for ALL brands, each line shows
+ * "client id : spend : budget consumed [@ timestamp when data arrived]".
  */
-function gchatCombined(clientsInfo, yesterdayISO) {
-  const lines = clientsInfo.map((c) => `${c.id} : ${formatBudget(c.budget)}`);
-  return `Blinkit Brands — Yesterday ${yesterdayISO}\n${lines.join("\n")}`;
+function gchatCombined(clientsInfo, todayISO, sentAt) {
+  const lines = clientsInfo.map((c) => `${c.id} : spend : ${formatBudget(c.budget)}`);
+  const header = sentAt ? `${todayISO} [${sentAt}]` : todayISO;
+  return `Blinkit Brands Report Monitoring\n${header}\n${lines.join("\n")}`;
 }
 
 module.exports = {
