@@ -28,9 +28,7 @@ function perClientNoContent(name) {
 /** Per-client status line when the client HAS yesterday-data. */
 function perClientStatus(name, budget, received) {
   const tail = received ? "report received" : "report NOT received";
-  return `data updated in graph | ${name} | budget=${formatBudget(
-    budget
-  )} | report triggered | ${tail}`;
+  return `data updated in graph | report triggered | ${tail} | ${name} | budget=${formatBudget(budget)} |`;
 }
 
 /**

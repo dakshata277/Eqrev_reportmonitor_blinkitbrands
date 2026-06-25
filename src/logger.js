@@ -1,23 +1,30 @@
 // File + console logger, rolled per IST day:
-//   status()/raw()           -> logs/monitor-YYYY-MM-DD.log (business log)
-//   info/warn/error/debug()  -> logs/debug-YYYY-MM-DD.log   (infra)
+//   status()/raw()           -> logs/monitor/monitor-YYYY-MM-DD.log (business log)
+//   info/warn/error/debug()  -> logs/debug/debug-YYYY-MM-DD.log     (infra)
 const fs = require("fs");
 const path = require("path");
 const { istDateString, istTimestamp } = require("./dateUtils");
 
 const LOG_DIR = path.join(__dirname, "..", "logs");
+const MONITOR_DIR = path.join(LOG_DIR, "monitor");
+const DEBUG_DIR = path.join(LOG_DIR, "debug");
+
+const DIR_FOR = { monitor: MONITOR_DIR, debug: DEBUG_DIR };
 
 function ensureDir() {
-  try {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  } catch (_) {
-    /* ignore */
+  for (const dir of [MONITOR_DIR, DEBUG_DIR]) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (_) {
+      /* ignore */
+    }
   }
 }
 
 function append(prefix, line) {
   ensureDir();
-  const file = path.join(LOG_DIR, `${prefix}-${istDateString()}.log`);
+  const dir = DIR_FOR[prefix] ?? LOG_DIR;
+  const file = path.join(dir, `${prefix}-${istDateString()}.log`);
   try {
     fs.appendFileSync(file, line + "\n", "utf8");
   } catch (err) {
