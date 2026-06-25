@@ -1,5 +1,4 @@
-// Loads active Blinkit Brands clients from BigQuery (accounts.id_password) —
-// same source seller_v2 uses. Nothing hardcoded.
+// Loads specific Blinkit Brands clients from BigQuery (accounts.id_password).
 const { BigQuery } = require("@google-cloud/bigquery");
 require("dotenv").config();
 const log = require("../logger");
@@ -11,10 +10,12 @@ function bigqueryClient() {
   return new BigQuery({ credentials, projectId: credentials.project_id });
 }
 
+const ALLOWED_CLIENTS = ["Phool", "Mogu Mogu", "Ace Blend", "Vilvah", "Cookd", "Pepe Jeans Innerfashion"];
+
 const CLIENTS_QUERY = `
   SELECT id, client_name AS name, blinkit_brands_email AS email
   FROM \`hopeful-history-405018.accounts.id_password\`
-  WHERE status = 'active'
+  WHERE client_name IN UNNEST(@allowedClients)
     AND blinkit_brands_email IS NOT NULL
     AND blinkit_brands_email != ''
   ORDER BY client_name
@@ -22,7 +23,10 @@ const CLIENTS_QUERY = `
 
 async function getClients() {
   const bq = bigqueryClient();
-  const [rows] = await bq.query({ query: CLIENTS_QUERY });
+  const [rows] = await bq.query({
+    query: CLIENTS_QUERY,
+    params: { allowedClients: ALLOWED_CLIENTS },
+  });
   return (rows || [])
     .filter((r) => r.id != null && r.email)
     .map((r) => ({
